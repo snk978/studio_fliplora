@@ -189,7 +189,7 @@ def extract_hd_frames(temp_path, frame_count, output_dir, video_instance):
         print("❌ Invalid video duration.")
         return []
 
-    fps = frame_count / duration
+    fps = 1
     if fps <= 0:
         print("❌ Invalid fps value.")
         return []
