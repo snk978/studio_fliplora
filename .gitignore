@@ -1,0 +1,24 @@
+# Python cache and compiled files
+*.pyc
+__pycache__/
+
+# Virtual environment folder (if you're using one)
+venv/
+env/
+
+# Django database (SQLite local DB file)
+db.sqlite3
+
+# Environment variables file (if you're using a .env file for secrets)
+.env
+
+# Static files collected by Django
+/staticfiles/
+
+# IDE/editor-specific files
+.idea/
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db

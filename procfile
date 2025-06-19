@@ -1,0 +1,1 @@
+web: gunicorn studio_bd.wsgi
