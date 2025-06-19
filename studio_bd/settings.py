@@ -25,9 +25,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 SECRET_KEY = 'django-insecure-ykb3=2_a=(#j16ug-&4=7bge)1docw3n46#6e7=@$8=$z5vl0b'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['https://studio-fliplora.onrender.com']
+ALLOWED_HOSTS = ['studio-fliplora.onrender.com']
 
 
 
@@ -81,14 +81,11 @@ WSGI_APPLICATION = 'studio_bd.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'studio_bd',
-        'USER': 'root',
-        'PASSWORD':'MSDthegod@123',
-        'HOST':'localhost',
-        'PORT':'3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
 
 
 # Password validation
