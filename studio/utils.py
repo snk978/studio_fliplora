@@ -168,7 +168,7 @@ import subprocess
 from django.core.files import File
 from .models import Frame
 from PIL import Image
-import numpy as np
+
 
 
 import os
