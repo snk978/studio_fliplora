@@ -196,7 +196,7 @@ def extract_hd_frames(temp_path, frame_count, output_dir, video_instance):
 
     output_pattern = os.path.join(output_dir, "frame_%04d.png")
     command = [
-        "ffmpeg", "-i", temp_path, "-vf", f"fps={fps:.6f}", "-vsync", "vfr", "-q:v", "2", output_pattern
+        "ffmpeg", "-i", temp_path, "-vf", f"fps={fps:.6f}", "-vsync", "vfr", "-q:v", "31", output_pattern
     ]
 
     try:
