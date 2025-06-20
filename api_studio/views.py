@@ -15,7 +15,7 @@ import uuid, base64
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Video_Final, Frame
+from studio.models import Video_Final, Frame
 from studio.tasks import extract_frames_task
 from celery.result import AsyncResult
 from studio_bd.celery import app
