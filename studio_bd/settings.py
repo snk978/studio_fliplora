@@ -141,3 +141,37 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# ------------------------------------------------------------------
+# Celery on Render
+# ------------------------------------------------------------------
+import os
+from urllib.parse import urlparse
+
+# Render injects   REDIS_URL   into every service that’s linked to a
+# Key‑Value (Redis) instance.  When you follow the Render docs you’ll
+# also create a second service (“Background Worker”) that runs:
+#     celery -A studio_bd worker --loglevel=info
+#
+# Locally: you probably run Redis on  localhost:6379 .
+#
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")   # Render or local
+CELERY_BROKER_URL = os.getenv('REDIS_URL')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL')
+
+
+# JSON keeps payloads small and avoids pickle exploits
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = CELERY_RESULT_SERIALIZER = "json"
+
+# --------- worker‑safety knobs ------------------------------------
+# Kill a worker after ONE task → no memory leaks (OOM defence)
+CELERYD_MAX_TASKS_PER_CHILD = int(os.getenv("CELERY_MAX_TASKS_PER_CHILD", 1))
+
+# Hard‑kill any job > 10 min, soft warn at 9 min
+CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_HARD_LIMIT_SEC", 60 * 10))
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_LIMIT_SEC", 60 * 9))
+
+# Don’t let one worker pre‑fetch a whole page of queued jobs
+CELERYD_PREFETCH_MULTIPLIER = 1
+CELERY_ACKS_LATE = True
