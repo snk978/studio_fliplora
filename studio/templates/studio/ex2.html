@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flipbook Video Editor</title>
+  <style>
+    /* ------- Base Layout Grid ------- */
+    :root {
+      --accent:#ffcc00; --bg-dark:#000; --bg-mid:#111;
+      --bg-light:#222;  --border:#333;  --radius:6px;
+      --shadow:0 2px 6px rgba(0,0,0,.6);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      height:100vh;display:grid;
+      grid-template-areas:
+        "header  header   header"
+        "tools   upload   main"
+        "tools   upload   timeline";
+      grid-template-rows:60px 1fr 120px;
+      grid-template-columns:60px 250px 1fr;
+      background:var(--bg-dark);color:#fff;
+      font-family:'Inter',Arial,sans-serif;
+    }
+    /* ------- Header ------- */
+    .header{
+      grid-area:header;display:flex;align-items:center;gap:18px;
+      padding:0 24px;background:var(--bg-mid);
+      border-bottom:1px solid var(--border);box-shadow:var(--shadow);z-index:2;
+    }
+    .logo{font-size:22px;font-weight:700;color:var(--accent);}
+    .project-name{
+      background:transparent;border:1px solid var(--border);color:#fff;
+      padding:6px 12px;border-radius:var(--radius);width:190px;
+    }
+    .export-btn{
+      margin-left:auto;background:var(--accent);color:#000;border:none;
+      border-radius:var(--radius);padding:8px 18px;font-weight:700;
+      cursor:pointer;transition:opacity .2s;
+    } .export-btn:hover{opacity:.8}
+    /* ------- Tools ------- */
+    .tools-panel{
+      grid-area:tools;background:var(--bg-mid);
+      display:flex;flex-direction:column;align-items:center;gap:12px;
+      padding-top:22px;border-right:1px solid var(--border);
+    }
+    .tool-icon{
+      width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+      background:var(--bg-light);border-radius:var(--radius);
+      cursor:pointer;transition:background .2s,transform .2s;
+      box-shadow:var(--shadow);font-size:18px;
+    }
+    .tool-icon:hover{transform:translateY(-2px)}
+    .tool-icon.active{background:var(--accent);color:#000}
+    /* ------- Upload Sidebar ------- */
+    .upload-panel{
+      grid-area:upload;background:var(--bg-mid);padding:24px;
+      display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--border);
+    }
+    .sidebar-title{font-size:19px;color:var(--accent)}
+    .import-btn,select.import-btn{
+      background:var(--bg-light);border:none;border-radius:var(--radius);
+      padding:10px 14px;color:#fff;font-size:14px;cursor:pointer;
+      text-align:center;transition:background .2s;
+    } .import-btn:hover{background:#3a3a3a}
+    /* ------- Main Preview ------- */
+    .container{
+      grid-area:main;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:16px;
+      padding:20px 0;overflow-y:auto;
+    }
+    video,#frameDisplay{max-width:640px;width:100%;border-radius:var(--radius);box-shadow:var(--shadow);}
+    #frameDisplay{display:none;} #frameDisplay img{width:100%;border-radius:var(--radius);}
+    .controls{display:flex;gap:10px}
+    .controls button{
+      background:var(--accent);border:none;color:#000;font-size:13px;
+      padding:10px 16px;border-radius:var(--radius);cursor:pointer;
+      box-shadow:var(--shadow);transition:opacity .2s;
+    } .controls button:hover{opacity:.85}
+    #statusMessage{font-size:18px;color:var(--accent);margin-top:6px;text-align:center}
+    /* ------- Seek‑bar / Trim ------- */
+    .seekbar-container{display:none;user-select:none;width:100%;max-width:640px}
+    .seekbar-track{
+      position:relative;height:14px;background:#444;border-radius:7px;
+      margin:14px auto 8px;
+    }
+    .trim-range{position:absolute;height:100%;background:rgba(0,255,0,.35);
+      border:1px solid #0f0;border-radius:7px;}
+    .handle{
+      position:absolute;width:12px;height:26px;top:-6px;border-radius:3px;
+      cursor:ew-resize;background:#0f0;box-shadow:var(--shadow);
+    } .handle.end{background:#f00}
+    .playhead{
+      position:absolute;top:0;width:2px;height:100%;background:#00f;
+      cursor:pointer;pointer-events:auto;
+    }
+    .filter-marker{
+      position:absolute;top:-4px;width:8px;height:8px;
+      border-radius:50%;background:var(--accent);transform:translateX(-50%);
+    }
+    .time-labels{display:flex;justify-content:space-between;font-size:13px}
+    /* ------- Timeline Ribbon ------- */
+    .timeline{
+      grid-area:timeline;background:var(--bg-mid);border-top:1px solid var(--border);
+      display:flex;align-items:center;gap:10px;overflow-x:auto;padding:12px 18px;position:relative;
+    }
+    .thumb{
+      flex:0 0 80px;height:60px;object-fit:cover;border-radius:var(--radius);
+      cursor:pointer;border:2px solid transparent;transition:border .15s,transform .15s;
+    } .thumb:hover{transform:translateY(-2px)} .thumb.active{border:2px solid var(--accent)}
+    .timeline-playhead{
+      position:absolute;top:4px;bottom:4px;width:2px;background:#00f;
+      pointer-events:none;transition:left .1s;
+    }
+    /* Scrollbar cosmetic */
+    ::-webkit-scrollbar{height:8px}
+    ::-webkit-scrollbar-track{background:#1a1a1a}
+    ::-webkit-scrollbar-thumb{background:#555;border-radius:4px}
+    ::-webkit-scrollbar-thumb:hover{background:#666}
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">Flipbook&nbsp;Editor</div>
+  <input class="project-name" placeholder="Project Name"/>
+  <button class="export-btn">Export</button>
+</div>
+
+<div class="tools-panel">
+  <div class="tool-icon active" data-tool="trim">✂</div>
+  <div class="tool-icon"          data-tool="filter">🎨</div>
+  <div class="tool-icon"          data-tool="other">🎞</div>
+</div>
+
+<div class="upload-panel">
+  <div class="sidebar-title">Upload&nbsp;&amp;&nbsp;Settings</div>
+  <input type="file" id="videoInput" accept="video/*" class="import-btn"/>
+  <label>Frame Count:</label>
+  <select id="frameCount" class="import-btn">
+    <option value="120">120&nbsp;Frames</option>
+    <option value="180">180&nbsp;Frames</option>
+    <option value="240">240&nbsp;Frames</option>
+  </select>
+  <button class="import-btn" onclick="toggleSeekbar()">Show Trim&nbsp;Tool</button>
+</div>
+
+<div class="container">
+  <video id="video" controls></video>
+  <div id="frameDisplay">
+    <img id="frameImage" src="">
+    <div id="frameNumberDisplay" style="margin-top:8px;font-size:18px;color:#ddd;text-align:center;"></div>
+  </div>
+
+  <div class="controls">
+    <button onclick="rewind()">⏪&nbsp;Back</button>
+    <button onclick="play()">▶️&nbsp;Play/Pause</button>
+    <button onclick="forward()">⏩&nbsp;Fwd</button>
+  </div>
+
+  <div class="seekbar-container" id="seekbarContainer">
+    <div class="seekbar-track" id="seekbar-track">
+      <div class="trim-range" id="trim-range"></div>
+      <div class="handle start" id="start-handle"></div>
+      <div class="handle end"   id="end-handle"></div>
+      <div class="playhead"     id="playhead"></div>
+    </div>
+    <div class="time-labels">
+      <span>Start:&nbsp;<span id="trim-start-label">0.00s</span></span>
+      <span>End:&nbsp;<span id="trim-end-label">0.00s</span></span>
+    </div>
+    <button id="send-trim-data">Send&nbsp;Trim&nbsp;Data</button>
+  </div>
+
+  <div id="statusMessage"></div>
+</div>
+
+<div class="timeline" id="timeline">
+  <div class="timeline-playhead" id="timelinePlayhead"></div>
+</div>
+
+<script>
+/* ---- DOM Handles ---- */
+const $ = id => document.getElementById(id);
+const video=$('video'), videoInput=$('videoInput'), frameDisplay=$('frameDisplay'),
+      frameImg=$('frameImage'), frameNum=$('frameNumberDisplay'),
+      status=$('statusMessage'), frameCountSel=$('frameCount'),
+      timeline=$('timeline'), timelinePH=$('timelinePlayhead'),
+      seekbar=$('seekbar-track'), playhead=$('playhead'),
+      startH=$('start-handle'), endH=$('end-handle'),
+      trimLblS=$('trim-start-label'), trimLblE=$('trim-end-label');
+
+/* ---- State ---- */
+let currentTool='trim';
+document.querySelectorAll('.tool-icon').forEach(ic=>{
+  ic.onclick=()=>{                 // switch tools
+    document.querySelectorAll('.tool-icon').forEach(i=>i.classList.remove('active'));
+    ic.classList.add('active'); currentTool=ic.dataset.tool;
+  };
+});
+
+let selectedFile=null, frames=[], currentFrame=0, intervalId=null, isPlaying=false;
+let duration=0, trimStart=0, trimEnd=0;
+const filterMarkers=[];
+
+/* ---- Upload ---- */
+videoInput.addEventListener('change',e=>{
+  selectedFile=e.target.files[0]; if(!selectedFile)return;
+  video.src=URL.createObjectURL(selectedFile);
+  video.style.display='block'; frameDisplay.style.display='none';
+  submitVideo();
+});
+function submitVideo(){
+  if(!selectedFile)return;
+  const fd=new FormData();
+  fd.append('video',selectedFile); fd.append('frame_count',frameCountSel.value);
+  status.textContent="⏳ uploading…";
+  fetch('https://studio-fliplora.onrender.com/api/studio/',{method:'POST',body:fd})
+  .then(r=>r.json()).then(d=>{
+    if(d.frames){frames=d.frames;buildTimeline();status.textContent=`✅ ${frames.length} frames`; }
+    else status.textContent="❌ no frames";
+  }).catch(()=>status.textContent="❌ upload failed");
+}
+
+/* ---- Timeline ---- */
+function buildTimeline(){
+  timeline.innerHTML='<div class="timeline-playhead" id="timelinePlayhead"></div>';
+  timelinePH=document.querySelector('.timeline-playhead');
+  frames.forEach((f,i)=>{
+    const img=new Image(); img.src=f.src; img.className='thumb'; img.dataset.i=i;
+    img.onclick=()=>seekFrame(i);
+    timeline.appendChild(img);
+  });
+  highlightThumb(0);
+}
+function highlightThumb(idx){
+  timeline.querySelectorAll('.thumb').forEach(t=>t.classList.remove('active'));
+  const act=timeline.querySelector(`.thumb[data-i="${idx}"]`);
+  if(act){act.classList.add('active'); timeline.scrollTo({left:act.offsetLeft-150,behavior:'smooth'});}
+}
+function updateTimelinePH(){ const p=frames.length?(currentFrame/frames.length)*100:0; timelinePH.style.left=`calc(${p}% - 1px)`; }
+
+/* ---- Playback ---- */
+function play(){
+  if(frames.length){
+    if(isPlaying){clearInterval(intervalId);isPlaying=false;return;}
+    frameDisplay.style.display='block'; video.style.display='none';
+    intervalId=setInterval(()=>{ if(currentFrame>=frames.length){clearInterval(intervalId);isPlaying=false;return;}
+      renderFrame(currentFrame++); },33); isPlaying=true;
+  }else{ video[video.paused?'play':'pause'](); }
+}
+function renderFrame(i){
+  currentFrame=i; const f=frames[i];
+  frameImg.src=f.src; frameNum.textContent="Frame: "+f.frame_number;
+  highlightThumb(i); updateTimelinePH();
+}
+function seekFrame(i){ if(i<0||i>=frames.length)return; clearInterval(intervalId);isPlaying=false; renderFrame(i);}
+function forward(){ if(currentFrame<frames.length-1)seekFrame(currentFrame+1);}
+function rewind(){ if(currentFrame>0)seekFrame(currentFrame-1);}
+
+/* ---- Trim + Play‑head ---- */
+video.onloadedmetadata=()=>{ duration=video.duration; trimEnd=duration; trimLblE.textContent=trimEnd.toFixed(2)+'s'; updateHandles(); };
+video.ontimeupdate=()=>{ const p=duration?(video.currentTime/duration)*100:0; playhead.style.left=p+'%'; };
+
+function updateHandles(){
+  const sp=(trimStart/duration)*100, ep=(trimEnd/duration)*100;
+  startH.style.left=sp+'%'; endH.style.left=ep+'%';
+  $('trim-range').style.left=sp+'%'; $('trim-range').style.width=(ep-sp)+'%';
+  trimLblS.textContent=trimStart.toFixed(2)+'s'; trimLblE.textContent=trimEnd.toFixed(2)+'s';
+}
+function posToTime(x){ const r=seekbar.getBoundingClientRect(); return Math.min(Math.max((x-r.left)/r.width*duration,0),duration); }
+
+/* handles */
+let dragStart=false,dragEnd=false,dragPH=false;
+startH.onmousedown=()=>dragStart=true; endH.onmousedown=()=>dragEnd=true;
+playhead.onmousedown=e=>{dragPH=true; e.stopPropagation();}
+document.onmouseup=()=>{dragStart=dragEnd=dragPH=false};
+document.onmousemove=e=>{
+  if(!dragStart&&!dragEnd&&!dragPH)return;
+  const t=posToTime(e.clientX);
+  if(dragStart&&t<trimEnd){trimStart=t;updateHandles();}
+  if(dragEnd&&t>trimStart){trimEnd=t;updateHandles();}
+  if(dragPH){ video.currentTime=t; if(frames.length) seekFrame(Math.floor(t*30)); } // 30 fps heuristic
+};
+/* click‑to‑seek OR add filter */
+seekbar.onclick=e=>{
+  const t=posToTime(e.clientX);
+  if(currentTool==='filter'){ addFilterMarker(t); }
+  else{ video.currentTime=t; if(frames.length) seekFrame(Math.floor(t*30)); }
+};
+/* Filter marker helper */
+function addFilterMarker(t){
+  const dot=document.createElement('div');
+  dot.className='filter-marker';
+  dot.style.left=(t/duration*100)+'%';
+  seekbar.appendChild(dot);
+  filterMarkers.push({time:+t.toFixed(2),el:dot});
+  console.log('Filter marker @',t.toFixed(2),'s',filterMarkers);
+}
+/* send trim data */
+$('send-trim-data').onclick=()=>{
+  const payload={start:+trimStart.toFixed(2),end:+trimEnd.toFixed(2),filters:filterMarkers.map(f=>f.time)};
+  status.textContent="⏳ trimming…";
+  fetch("http://127.0.0.1:8000/api/trim/",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  .then(r=>r.json()).then(d=>{
+    if(d.trimmed_video_url){ video.src=d.trimmed_video_url; video.style.display='block'; frameDisplay.style.display='none';
+      status.textContent="✅ trimmed video"; }
+    else status.textContent="❌ trim failed";
+  }).catch(()=>status.textContent="❌ trim request failed");
+};
+/* UI toggle */
+function toggleSeekbar(){ $('seekbarContainer').style.display='block'; }
+</script>
+</body>
+</html>

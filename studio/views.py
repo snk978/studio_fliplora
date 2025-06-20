@@ -2,4 +2,4 @@ from django.shortcuts import render
 from django.http import HttpResponse
 # Create your views here.
 def ex(request):
-   return render(request,"studio/ex.html")
+   return render(request,"studio/ex2.html")
